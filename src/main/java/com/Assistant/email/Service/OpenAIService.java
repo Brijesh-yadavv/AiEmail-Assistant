@@ -70,6 +70,8 @@ public class OpenAIService {
         return jsonNode.get("choices").get(0).get("message").get("content").asString();
 
 
+
+
     }
 
 }
