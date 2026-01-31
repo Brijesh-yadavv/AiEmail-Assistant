@@ -7,6 +7,7 @@ import org.springframework.http.*;
 import org.springframework.http.server.reactive.HttpHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -30,10 +31,12 @@ public class OpenAIService {
     @Value("${azure.openai.api-version}")
     private String apiVersion;
 
-    RestTemplate restTemplate=new RestTemplate();
-    HttpHeaders headers=new HttpHeaders();
+    // RestTemplate restTemplate=new RestTemplate();
+  //  HttpHeaders headers=new HttpHeaders();
+    private final WebClient webClient;
 
-    private final ObjectMapper objectMapper=new ObjectMapper();
+
+    private final ObjectMapper objectMapper;
 
     public String generateReply(String emailContent, String tone){
 
@@ -56,18 +59,34 @@ public class OpenAIService {
         body.put("messages", List.of(systemInstruction,userMsg));
         body.put("temperature",0.7);
 
+
+
         //HttpHeaders headers = new HttpHeaders(MediaType.APPLICATION_JSON,set);
 
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("api-key",apiKey);
+        /*headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("api-key",apiKey);*/
 
-        HttpEntity<Map<String,Object>>entity=new HttpEntity<>(body,headers);
+        String responseBody = webClient.post()
+                .uri(url)
+                .header("Content-Type", "application/json")
+                .header("api-key", apiKey)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();   // converts async → sync (for now)
 
-        ResponseEntity<String> response=restTemplate.exchange(url, HttpMethod.POST,entity,String.class);
+       // HttpEntity<Map<String,Object>>entity=new HttpEntity<>(body,headers);
 
-        JsonNode jsonNode=objectMapper.readTree(response.getBody());
+      //  ResponseEntity<String> response=restTemplate.exchange(url, HttpMethod.POST,entity,String.class);
+
+        //JsonNode jsonNode=objectMapper.readTree(response.getBody());
+
+        JsonNode jsonNode = objectMapper.readTree(responseBody);
+
 
         return jsonNode.get("choices").get(0).get("message").get("content").asString();
+
+
 
 
     }
